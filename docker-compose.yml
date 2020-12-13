@@ -1,0 +1,34 @@
+version: '3.7'
+services:
+    web-api:
+        build: .
+        container_name: web-api
+        hostname: web-api
+        environment:
+            - TEST_DATABASE_URL=postgresql://db_user:password@pg:5432/test_bd
+            - POSTGRES_CONNECT_URL=//db_user:password@pg:5432/db
+        ports:
+            - 80:8000
+        volumes:
+            - .:/code
+        entrypoint:
+            - /bin/bash
+            - -c
+            - |
+                echo -e "Waiting for db to be ready...\n"
+                while !</dev/tcp/pg/5432; do sleep 5; done;
+                uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+        depends_on:
+            - pg
+    pg:
+        image: postgres
+        environment:
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB:  db
+            POSTGRES_USER:  db_user
+        volumes:
+            - ./postgres-data:/var/lib/postgresql/data
+    #      - ./init.sql:/docker-entrypoint-initdb.d/10-init.sql
+        ports:
+            - "5432:5432"
